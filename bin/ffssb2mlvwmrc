@@ -1,0 +1,193 @@
+#!/bin/sh
+
+#
+# ffssb2mlvwmrc - Generate MLVWM application style configs for Firefox SSBs (site-specific browsers)
+#
+# Intended for use only with ffssb: 
+#
+# <https://github.com/sebastianappler/ffssb>
+#
+# MIT License
+#
+# Copyright (c) 2024 Morgan Aldridge
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+#
+
+tool="$(basename "$0")"
+
+# FFSSB path components
+ffssb_prefix="ffssb."
+ffssb_apps_dir="${HOME}/.local/share/applications"
+ffssb_icons_dir="${HOME}/.local/share/icons/hicolor/scalable/apps/16x16/apps"
+
+# mlvwmrc path components
+mlvwmrc_dir="${HOME}/.mlvwm"
+mlvwmrc_apps_dir="${mlvwmrc_dir}/apps"
+mlvwmrc_icons_dir="${mlvwmrc_dir}/pixmap"
+mlvwmrc_ffssb_apps_dir="${mlvwmrc_apps_dir}/ffssb"
+mlvwmrc_ffssb_icons_dir="${mlvwmrc_icons_dir}/ffssb"
+
+has_ffssb() {
+  which ffssb >/dev/null 2>&1
+}
+
+has_imagemagick() {
+  which identify convert >/dev/null 2>&1
+}
+
+#
+# FFSSB utility functions
+#
+ffssb_apps() {
+  ffssb list 2>/dev/null | tail -n +2 | awk "{ print \$1 }"
+}
+
+ffssb_app_path() {
+  echo "${ffssb_apps_dir}/${ffssb_prefix}${1}.desktop"
+}
+
+has_ffssb_app() {
+  [ -e "$(ffssb_app_path "$1")" ]
+}
+
+ffssb_app_icon_path() {
+  echo "${ffssb_icons_dir}/${1}.png"
+}
+
+has_ffssb_app_icon() {
+  [ -e "$(ffssb_app_icon_path "$1")" ]
+}
+
+#
+# mlvwmrc Firefox app style utility functions
+#
+mlvwmrc_firefox_app_path() {
+  echo "${mlvwmrc_apps_dir}/firefox"
+}
+
+has_mlvwmrc_firefox_app() {
+  [ -e "$(mlvwmrc_firefox_app_path)" ]
+}
+
+mlvwmrc_firefox_app_icon_path() {
+  echo "${mlvwmrc_icons_dir}/firefox.xpm"
+}
+
+has_mlvwmrc_firefox_app_icon() {
+  [ -e "$(mlvwmrc_firefox_app_icon_path)" ]
+}
+
+#
+# mlvwmrc FFSSB app style utility functions
+#
+init_mlvwmrc_ffssb_dirs() {
+  ! [ -d "${mlvwmrc_ffssb_apps_dir}" ] && mkdir "${mlvwmrc_ffssb_apps_dir}"
+  ! [ -d "${mlvwmrc_ffssb_icons_dir}" ] && mkdir "${mlvwmrc_ffssb_icons_dir}"
+}
+
+mlvwmrc_ffssb_app_path() {
+  echo "${mlvwmrc_ffssb_apps_dir}/${1}"
+}
+
+has_mlvwmrc_ffssb_app() {
+  [ -e "$(mlvwmrc_ffssb_app_path "$1")" ]
+}
+
+mlvwmrc_ffssb_app_icon_path() {
+  echo "${mlvwmrc_ffssb_icons_dir}/${1}.xpm"
+}
+
+has_mlvwmrc_ffssb_app_icon() {
+  [ -e "$(mlvwmrc_ffssb_app_icon_path "$1")" ]
+}
+
+#
+# main
+#
+main() {
+  ! has_ffssb && \
+    echo "${tool}: Requires ffssb! Exiting." >&2 && \
+    exit 1
+  ! has_imagemagick && \
+    echo "${tool}: Requires ImageMagick! Exiting." >&2 && \
+    exit 1
+  ! has_mlvwmrc_firefox_app && \
+    echo "${tool}: mlvwmrc application styles for Firefox not found! Exiting." && \
+    exit 1
+  ! has_mlvwmrc_firefox_app_icon && \
+    echo "${tool}: mlvwmrc application icon for Firefox not found! Exiting." && \
+    exit 1
+
+  # create mlvwmrc subdirectories for FFSSB application styles & icons
+  init_mlvwmrc_ffssb_dirs
+
+  # step through the FFSSBs and create mlvwmrc application styles
+  tmpfile="$(mktemp -t "${tool}.XXXXXXXXXX")" && {
+    ffssb_apps > "${tmpfile}"
+    while read -r line ; do
+      echo "Processing ffssb application '${line}'..."
+
+      # does the FFSSB's .desktop file exist?
+      ! has_ffssb_app "${line}" && \
+        echo "$0: ffssb application '${line}' not found. Skipping." >&2 && \
+        continue
+
+      # do we already have mlvwmrc application styles for this FFSSB?
+      has_mlvwmrc_ffssb_app "${line}" && \
+        echo "${tool}: mlvwmrc styles already exist for ffssb application '${line}'. Skipping." >&2 && \
+        continue
+
+      # convert the FFSSB's .png icon to .xpm, or just use Firefox's icon
+      mlvwmrc_app_icon="$(mlvwmrc_firefox_app_icon_path)"
+      if has_ffssb_app_icon "${line}" ; then
+        app_icon="$(ffssb_app_icon_path "${line}")"
+        printf "\tUsing ffssb application '%s' icon '%s'...\n" "${line}" "${app_icon}"
+
+        if has_mlvwmrc_ffssb_app_icon "${line}" ; then
+          mlvwmrc_app_icon="$(mlvwmrc_ffssb_app_icon_path "${line}")"
+          printf "\tmlvwmrc icon '%s' already exists. Keeping...\n" "${mlvwmrc_app_icon}"
+        else
+          tmp_mlvwmrc_app_icon="$(mlvwmrc_ffssb_app_icon_path "${line}")"
+          printf "\tConverting ffssb application icon '%s' to mlvwmrc icon '%s'...\n" "${app_icon}" "${tmp_mlvwmrc_app_icon}"
+          if convert "${app_icon}" "${tmp_mlvwmrc_app_icon}" ; then
+            mlvwmrc_app_icon="${tmp_mlvwmrc_app_icon}"
+            printf "\tUsing new mlvwmrc icon '%s'...\n" "${mlvwmrc_app_icon}"
+          else
+            echo "${tool}: Failed to convert ffssb application icon '${app_icon}' to mlvwmrc icon '${tmp_mlvwmrc_app_icon}'! Will use default mlvwmrc Firefox icon '${mlvwmrc_app_icon}' instead..." >&2
+          fi
+        fi
+      else
+          printf "\tUsing default mlvwmrc Firefox application icon '%s'...\n" "${app_icon}"
+      fi
+
+      # copy Firefox mlvwmrc application styles and modify for the FFSSB
+      mlvwmrc_app_styles="$(mlvwmrc_ffssb_app_path "${line}")"
+      printf "\tCopying Firefox mlvwmrc application styles to new mlvwmrc '%s' ffssb application styles '%s'...\n" "${line}" "${mlvwmrc_app_styles}"
+      ! cp "$(mlvwmrc_firefox_app_path)" "${mlvwmrc_app_styles}" && \
+        echo "${tool}: Failed to copy Firefox mlvwmrc application styles '$(mlvwmrc_firefox_app_path)' to new mlvwmrc '${line}' ffssb application styles '${mlvwmrc_app_styles}'! Exiting." && \
+        exit 1
+      printf "\tUpdating new mlvwmrc '%s' ffssb application styles '%s'...\n" "${line}" "${mlvwmrc_app_styles}"
+      # TODO
+    done < "${tmpfile}"
+    rm -f "${tmpfile}"
+  } || exit 1
+}
+
+main "$@"
