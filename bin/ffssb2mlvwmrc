@@ -40,8 +40,10 @@ ffssb_icons_dir="${HOME}/.local/share/icons/hicolor/scalable/apps/16x16/apps"
 # mlvwmrc path components
 mlvwmrc_dir="${HOME}/.mlvwm"
 mlvwmrc_apps_dir="${mlvwmrc_dir}/apps"
+mlvwmrc_apps_manifest="${mlvwmrc_apps_dir}/.AppsManifest"
 mlvwmrc_icons_dir="${mlvwmrc_dir}/pixmap"
 mlvwmrc_ffssb_apps_dir="${mlvwmrc_apps_dir}/ffssb"
+mlvwmrc_ffssb_apps_manifest="${mlvwmrc_ffssb_apps_dir}/.AppsManifest"
 mlvwmrc_ffssb_icons_dir="${mlvwmrc_icons_dir}/ffssb"
 
 has_ffssb() {
@@ -118,6 +120,11 @@ has_mlvwmrc_ffssb_app_icon() {
   [ -e "$(mlvwmrc_ffssb_app_icon_path "$1")" ]
 }
 
+init_mlvwmrc_ffssb_apps_manifest() {
+  [ -e "${mlvwmrc_ffssb_apps_manifest}" ] && rm "${mlvwmrc_ffssb_apps_manifest}"
+  touch "${mlvwmrc_ffssb_apps_manifest}"
+}
+
 #
 # main
 #
@@ -154,7 +161,7 @@ main() {
         echo "${tool}: mlvwmrc styles already exist for ffssb application '${line}'. Skipping." >&2 && \
         continue
 
-      # convert the FFSSB's .png icon to .xpm, or just use Firefox's icon
+      # convert the FFSSB's .png icon to .xpm (resizing to 16x16, if necessary), or just use Firefox's icon
       mlvwmrc_app_icon="$(mlvwmrc_firefox_app_icon_path)"
       if has_ffssb_app_icon "${line}" ; then
         app_icon="$(ffssb_app_icon_path "${line}")"
@@ -166,7 +173,7 @@ main() {
         else
           tmp_mlvwmrc_app_icon="$(mlvwmrc_ffssb_app_icon_path "${line}")"
           printf "\tConverting ffssb application icon '%s' to mlvwmrc icon '%s'...\n" "${app_icon}" "${tmp_mlvwmrc_app_icon}"
-          if convert "${app_icon}" "${tmp_mlvwmrc_app_icon}" ; then
+          if convert "${app_icon}" -resize "16x16>" "${tmp_mlvwmrc_app_icon}" ; then
             mlvwmrc_app_icon="${tmp_mlvwmrc_app_icon}"
             printf "\tUsing new mlvwmrc icon '%s'...\n" "${mlvwmrc_app_icon}"
           else
@@ -177,15 +184,27 @@ main() {
           printf "\tUsing default mlvwmrc Firefox application icon '%s'...\n" "${app_icon}"
       fi
 
-      # copy Firefox mlvwmrc application styles and modify for the FFSSB
+      # create mlvwmrc application styles for the FFSSB, using the Firefox menu bar
       mlvwmrc_app_styles="$(mlvwmrc_ffssb_app_path "${line}")"
-      printf "\tCopying Firefox mlvwmrc application styles to new mlvwmrc '%s' ffssb application styles '%s'...\n" "${line}" "${mlvwmrc_app_styles}"
-      ! cp "$(mlvwmrc_firefox_app_path)" "${mlvwmrc_app_styles}" && \
-        echo "${tool}: Failed to copy Firefox mlvwmrc application styles '$(mlvwmrc_firefox_app_path)' to new mlvwmrc '${line}' ffssb application styles '${mlvwmrc_app_styles}'! Exiting." && \
-        exit 1
-      printf "\tUpdating new mlvwmrc '%s' ffssb application styles '%s'...\n" "${line}" "${mlvwmrc_app_styles}"
-      # TODO
+      printf "\tCreating new mlvwmrc '%s' ffssb application styles '%s' using Firefox menu bar...\n" "${line}" "${mlvwmrc_app_styles}"
+      cat <<EOS > "${mlvwmrc_app_styles}"
+Style
+"${line}" NoSBarH, NoSBarV
+"${line}" MiniIcon ffssb/${line}.xpm, MenuBar Firefox
+END
+EOS
+      ! [ -e "${mlvwmrc_app_styles}" ] && echo "${tool}: Failed to create new mlvwmrc '${line}' ffssb application styles '${mlvwmrc_app_styles}'! Exiting." && exit 1
     done < "${tmpfile}"
+
+    # step through the FFSSBs and create manifest file for including all FFSSBs
+    init_mlvwmrc_ffssb_apps_manifest
+    printf "\nBuilding mlvwmrc apps manifest file '%s' for ffssb application styles...\n" "${mlvwmrc_ffssb_apps_manifest}"
+    while read -r line ; do
+      printf "\tAdding ffssb application '%s' to manifest...\n" "${line}"
+      echo "Read .mlvwm/apps/ffssb/${line}" >> "${mlvwmrc_ffssb_apps_manifest}"
+    done < "${tmpfile}"
+    printf "\tDone.\n\nIMPORTANT: Please update your mlvwmrc applications manifest file '%s' to import the ffssb manifest file '%s'\n" "${mlvwmrc_apps_manifest}" "${mlvwmrc_ffssb_apps_manifest}"
+
     rm -f "${tmpfile}"
   } || exit 1
 }
