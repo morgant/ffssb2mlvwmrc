@@ -42,7 +42,7 @@ If you've never used `ffssb2mlvwmrc` before and don't have any `~/.mlvwm/apps/ff
     ```
 3. Restart `mlvwm` to reload your configurations & application styles
 
-### Regenerating FFSSB Application Styles
+### Regenerating Application Styles
 
 If you've previously used `ffssb2mlvwmrc` to create FFSSB application styles et al, but you've since updated your FFSSBs, I suggest updating them as follows:
 
