@@ -203,7 +203,24 @@ EOS
       printf "\tAdding ffssb application '%s' to manifest...\n" "${line}"
       echo "Read .mlvwm/apps/ffssb/${line}" >> "${mlvwmrc_ffssb_apps_manifest}"
     done < "${tmpfile}"
-    printf "\tDone.\n\nIMPORTANT: Please update your mlvwmrc applications manifest file '%s' to import the ffssb manifest file '%s'\n" "${mlvwmrc_apps_manifest}" "${mlvwmrc_ffssb_apps_manifest}"
+    printf "\tDone.\n"
+
+    # check to see if FFSSBs manifest is included in the mlvwmrc applications manifest
+    printf "\nChecking mlvwmrc apps manifest file '%s' for ffssb apps manifest file '%s'...\n" "${mlvwmrc_apps_manifest}" "${mlvwmrc_ffssb_apps_manifest}"
+    grep -qE "^Read .mlvwm/apps/ffssb/.AppsManifest$" "${mlvwmrc_apps_manifest}" \
+      && printf "\tAlready included.\n" \
+      || printf "\tNot included.\n\tIMPORTANT: Please update your mlvwmrc applications manifest file '%s' to import the ffssb manifest file by adding a 'Read .mlvwm/apps/ffssb/.AppsManifest' line.\n" "${mlvwmrc_apps_manifest}"
+
+    # output example menu items for manual inclusion
+    printf "\nIf you would like to add your FFSSBs to menu items, paste the following into the appropriate Menu...END configution:\n\n"
+    while read -r line ; do
+      if has_mlvwmrc_ffssb_app_icon "${line}" ; then
+        mlvwmrc_app_icon="ffssb/${line}.xpm"
+      else
+        mlvwmrc_app_icon="firefox.xpm"
+      fi
+      printf "\"%s\" Action Exec \"ffssb\" exec ffssb launch %s, Icon %s\n" "${line}" "${line}" "${mlvwmrc_app_icon}"
+    done < "${tmpfile}"
 
     rm -f "${tmpfile}"
   } || exit 1
