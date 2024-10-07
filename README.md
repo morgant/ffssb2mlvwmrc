@@ -5,7 +5,7 @@ by Morgan Aldridge <morgant@makkintosshu.com>
 
 This is a small utility to generate [MLVWM](https://github.com/morgant/mlvwm) application styles (specifically [`mlvwmrc`](https://github.com/morgant/mlvwmrc)) for [Firefox](https://www.mozilla.org/firefox/) SSBs (Site-Specific Browsers) which have been created using [Sebastian Appler's `ffssb`](https://github.com/sebastianappler/ffssb).
 
-**Important:** _This utility is in early development and is not yet complete. DO NOT USE IT!_
+**Important:** _This utility is in early testing. Please back up your data, especially your `~/.mlvwm/` configs, before using this!_
 
 ## PREREQUISITES
 
