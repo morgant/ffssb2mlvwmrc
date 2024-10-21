@@ -58,7 +58,7 @@ has_imagemagick() {
 # FFSSB utility functions
 #
 ffssb_apps() {
-  ffssb list 2>/dev/null | tail -n +2 | awk "{ print \$1 }"
+  ffssb list 2>/dev/null | tail -n +2 | sort | awk "{ print \$1 }"
 }
 
 ffssb_app_path() {
