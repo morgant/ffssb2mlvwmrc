@@ -44,6 +44,7 @@ mlvwmrc_apps_manifest="${mlvwmrc_apps_dir}/.AppsManifest"
 mlvwmrc_icons_dir="${mlvwmrc_dir}/pixmap"
 mlvwmrc_ffssb_apps_dir="${mlvwmrc_apps_dir}/ffssb"
 mlvwmrc_ffssb_apps_manifest="${mlvwmrc_ffssb_apps_dir}/.AppsManifest"
+mlvwmrc_ffssb_apps_menu="${mlvwmrc_ffssb_apps_dir}/.AppsMenu"
 mlvwmrc_ffssb_icons_dir="${mlvwmrc_icons_dir}/ffssb"
 
 has_ffssb() {
@@ -123,6 +124,11 @@ has_mlvwmrc_ffssb_app_icon() {
 init_mlvwmrc_ffssb_apps_manifest() {
   [ -e "${mlvwmrc_ffssb_apps_manifest}" ] && rm "${mlvwmrc_ffssb_apps_manifest}"
   touch "${mlvwmrc_ffssb_apps_manifest}"
+}
+
+init_mlvwmrc_ffssb_apps_menu() {
+  [ -e "${mlvwmrc_ffssb_apps_menu}" ] && rm "${mlvwmrc_ffssb_apps_menu}"
+  touch "${mlvwmrc_ffssb_apps_menu}"
 }
 
 #
@@ -211,16 +217,32 @@ EOS
       && printf "\tAlready included.\n" \
       || printf "\tNot included.\n\tIMPORTANT: Please update your mlvwmrc applications manifest file '%s' to import the ffssb manifest file by adding a 'Read .mlvwm/apps/ffssb/.AppsManifest' line.\n" "${mlvwmrc_apps_manifest}"
 
-    # output example menu items for manual inclusion
-    printf "\nIf you would like to add your FFSSBs to menu items, paste the following into the appropriate Menu...END configution:\n\n"
+    # generate menu items for manual inclusion as submenu
+    init_mlvwmrc_ffssb_apps_menu
+    printf "\nBuilding mlvwmrc menu file '%s' for ffssb apps...\n" "${mlvwmrc_ffssb_apps_menu}"
+    printf "\tOpening Menu configuration block..."
+    echo "Menu FFSSB-FFSSBs" >> "${mlvwmrc_ffssb_apps_menu}"
     while read -r line ; do
+      printf "\tAdding ffssb application '%s' to menu...\n" "${line}"
       if has_mlvwmrc_ffssb_app_icon "${line}" ; then
         mlvwmrc_app_icon="ffssb/${line}.xpm"
       else
         mlvwmrc_app_icon="firefox.xpm"
       fi
-      printf "\"%s\" Action Exec \"ffssb\" exec ffssb launch %s, Icon %s\n" "${line}" "${line}" "${mlvwmrc_app_icon}"
+      printf "\"%s\" Action Exec \"ffssb\" exec ffssb launch %s, Icon %s\n" "${line}" "${line}" "${mlvwmrc_app_icon}" >> "${mlvwmrc_ffssb_apps_menu}"
     done < "${tmpfile}"
+    printf "\tDone.\n"
+
+    cat <<EOM
+
+If you would like to add FFSSBs as a sub-menu in your configuration, first include the FFSB menu styles file:
+
+Read .mlvwm/apps/ffssb/.AppsMenu
+
+Then paste the following into the appropriate Menu...END configuration and customize as you like:
+
+"FFSSBs" SubMenu FFSSB-FFSSBs, Icon folder.xpm
+EOM
 
     rm -f "${tmpfile}"
   } || exit 1
